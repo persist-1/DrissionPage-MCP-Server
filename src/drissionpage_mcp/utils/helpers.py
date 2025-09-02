@@ -12,12 +12,13 @@ import time
 import os
 
 
-def get_dom_tree_json(tab, selector: str = "body") -> str:
+def get_dom_tree_json(tab, selector: str = "body", max_depth: int = 10) -> str:
     """获取DOM树的JSON表示
     
     Args:
         tab: ChromiumTab实例
         selector: CSS选择器，默认为body
+        max_depth: 最大遍历深度
         
     Returns:
         str: DOM树的JSON字符串
@@ -101,7 +102,7 @@ def get_dom_tree_json(tab, selector: str = "body") -> str:
             return JSON.stringify({{error: 'Element not found'}});
         }}
         
-        const domTree = buildDomJsonTree(rootElement);
+        const domTree = buildDomJsonTree(rootElement, 0, {max_depth});
         return JSON.stringify(domTree, null, 2);
         """
         

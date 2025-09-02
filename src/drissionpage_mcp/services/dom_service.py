@@ -92,47 +92,49 @@ class DOMService:
         return JSON.stringify(domJson, null, 2);
         '''
     
-    def get_simplified_dom_tree(self) -> Dict[str, Any]:
+    def get_simplified_dom_tree(self, max_depth: int = 10) -> Dict[str, Any]:
         """获取当前标签页的简化版DOM树
         
+        Args:
+            max_depth: 最大遍历深度
+            
         Returns:
             dict: DOM树的JSON表示
         """
+        # 原因：添加max_depth参数支持，提供深度控制功能，副作用：无，回滚策略：移除max_depth参数
         try:
-            dom_tree_json = self.tab.run_js(self._dom_tree_script)
+            from ..utils.helpers import get_dom_tree_json
+            result = get_dom_tree_json(self.tab, "body", max_depth)
             
             # 如果返回的是字符串，尝试解析为JSON
-            if isinstance(dom_tree_json, str):
+            if isinstance(result, str):
                 import json
-                return json.loads(dom_tree_json)
+                return json.loads(result)
             
-            return dom_tree_json
+            return result
         except Exception as e:
             return {"error": f"获取DOM树失败: {str(e)}"}
     
-    def get_dom_tree_by_selector(self, selector: str) -> Dict[str, Any]:
+    def get_dom_tree_by_selector(self, selector: str, max_depth: int = 10) -> Dict[str, Any]:
         """获取指定选择器的DOM树
         
         Args:
             selector: CSS选择器或XPath
+            max_depth: 最大遍历深度
             
         Returns:
             dict: DOM树的JSON表示
         """
+        # 原因：添加max_depth参数支持，使用统一的DOM树获取接口，副作用：无，回滚策略：还原原始逻辑
         try:
-            # 修改JavaScript代码以支持自定义根节点
-            custom_script = self._dom_tree_script.replace(
-                "const domJson = buildDomJsonTree();",
-                f"const rootElement = document.querySelector('{selector}'); const domJson = rootElement ? buildDomJsonTree(rootElement) : {{}};"
-            )
+            from ..utils.helpers import get_dom_tree_json
+            result = get_dom_tree_json(self.tab, selector, max_depth)
             
-            dom_tree_json = self.tab.run_js(custom_script)
-            
-            if isinstance(dom_tree_json, str):
+            if isinstance(result, str):
                 import json
-                return json.loads(dom_tree_json)
+                return json.loads(result)
             
-            return dom_tree_json
+            return result
         except Exception as e:
             return {"error": f"获取指定选择器的DOM树失败: {str(e)}"}
     

@@ -143,6 +143,44 @@ class NetworkListener:
         except Exception as e:
             return f"设置网络响应监听失败: {str(e)}"
     
+    def setup_multi_filter_listener(self, filter_types: List[str] = None, url_include: str = ".") -> str:
+        """设置多过滤器网络响应监听
+        
+        Args:
+            filter_types: 需要监听的mimeType类型列表
+            url_include: 需要监听的url包含的关键字
+            
+        Returns:
+            str: 设置结果
+        """
+        # 原因：支持List[str]类型的多过滤器，提升网络监听的灵活性，副作用：无，回滚策略：移除此方法
+        if not filter_types:
+            filter_types = ["application/json"]
+        
+        # 启用网络域
+        self.tab.run_cdp("Network.enable")
+
+        def multi_response_callback(**event):
+            response = event.get("response", {})
+            _url = response.get("url", "")
+            _mime_type = response.get("mimeType", "")
+            
+            # 检查是否匹配任一过滤器类型
+            type_matched = any(filter_type in _mime_type for filter_type in filter_types)
+            
+            if type_matched and url_include in _url:
+                self.response_listener_data.append({
+                    "event_name": "Network.responseReceived",
+                    "event_data": event,
+                    "matched_filters": [ft for ft in filter_types if ft in _mime_type]
+                })
+        
+        try:
+            self.tab.driver.set_callback("Network.responseReceived", multi_response_callback)
+            return f"多过滤器网络响应监听设置成功，监听类型: {filter_types}, URL包含: {url_include}"
+        except Exception as e:
+            return f"设置多过滤器网络响应监听失败: {str(e)}"
+    
     def stop_response_listener(self, clear_data: bool = False) -> str:
         """关闭监听网页发送的数据包
         
@@ -167,6 +205,20 @@ class NetworkListener:
             list: 网络响应数据列表
         """
         return self.response_listener_data
+    
+    def get_response_listener_data_limited(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """获取限制数量的网络响应监听数据
+        
+        Args:
+            limit: 返回数据的最大数量
+            
+        Returns:
+            list: 限制数量的网络响应数据列表
+        """
+        # 原因：添加limit参数支持，提供数据量控制功能，副作用：无，回滚策略：移除此方法
+        if limit <= 0:
+            return []
+        return self.response_listener_data[-limit:] if len(self.response_listener_data) > limit else self.response_listener_data
     
     def clear_response_listener_data(self) -> str:
         """清空网络响应监听数据

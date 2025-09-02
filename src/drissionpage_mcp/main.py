@@ -131,27 +131,28 @@ class DrissionPageMCP:
         
         # 元素操作工具
         @self.app.tool()
-        async def click_element(selector: str, selector_type: str = "css", index: int = 0) -> str:
-            """点击页面元素"""
+        async def click_element(selector: str, selector_type: str = "css", index: int = 0, 
+                               smart_feedback: bool = True, use_cache: bool = True) -> str:
+            """点击页面元素（优化版）
+
+            Args:
+                selector: 元素选择器
+                selector_type: 选择器类型 (css, xpath, text)
+                index: 元素索引（当有多个匹配时）
+                smart_feedback: 是否启用智能反馈
+                use_cache: 是否使用缓存
+
+            Returns:
+                str: 操作结果
+            """
             try:
                 if not self.element_handler:
                     return "请先连接浏览器"
                 
-                if selector_type == "xpath":
-                    # 修复：click_by_xpath不是异步方法
-                    result = self.element_handler.click_by_xpath(selector)
-                    return str(result)
-                elif selector_type == "text":
-                    # 修复：click_by_containing_text不是异步方法
-                    return self.element_handler.click_by_containing_text(selector, index)
-                else:
-                    # CSS选择器
-                    element = self.element_handler.tab.ele(selector, index=index + 1)
-                    if element:
-                        element.click()
-                        return f"成功点击元素: {selector}"
-                    else:
-                        return f"未找到元素: {selector}"
+                # 原因：使用统一的元素点击接口，支持更多选择器类型和智能反馈，副作用：无，回滚策略：还原原始逻辑
+                return self.element_handler.click_element_unified(
+                    selector, selector_type, index, smart_feedback, use_cache
+                )
             except Exception as e:
                 logger.error(f"点击元素失败: {e}")
                 return f"点击元素失败: {str(e)}"
@@ -239,52 +240,47 @@ class DrissionPageMCP:
                 if not self.dom_service:
                     return "请先连接浏览器"
                 
-                # 修复：根据selector参数选择合适的方法
+                # 原因：修复max_depth参数传递，确保深度控制功能正常工作，副作用：无，回滚策略：移除max_depth参数
                 if selector == "body":
-                    return str(self.dom_service.get_simplified_dom_tree())
+                    return str(self.dom_service.get_simplified_dom_tree(max_depth))
                 else:
-                    return str(self.dom_service.get_dom_tree_by_selector(selector))
+                    return str(self.dom_service.get_dom_tree_by_selector(selector, max_depth))
             except Exception as e:
                 logger.error(f"获取DOM树失败: {e}")
                 return f"获取DOM树失败: {str(e)}"
         
         @self.app.tool()
-        async def find_elements(selector: str, selector_type: str = "css") -> str:
-            """查找页面元素（支持智能文本匹配）"""
-            # 原因：集成智能文本匹配算法，提升元素查找的精确性和灵活性，副作用：无，回滚策略：移除智能匹配相关代码
+        async def find_elements(selector: str, selector_type: str = "css", 
+                               limit: int = 10, include_similar: bool = True) -> str:
+            """查找页面元素（支持智能文本匹配和性能优化）
+            
+            Args:
+                selector: 元素选择器
+                selector_type: 选择器类型
+                limit: 返回元素数量限制
+                include_similar: 是否包含相似元素
+                
+            Returns:
+                str: 查找结果
+            """
+            # 原因：添加limit和include_similar参数支持，使用统一的元素查找接口，副作用：无，回滚策略：还原原始逻辑
             try:
-                if not self.dom_service:
+                if not self.element_handler:
                     return "请先连接浏览器"
                 
-                if selector_type == "text":
-                    # 使用智能文本匹配搜索元素
-                    elements = self.dom_service.search_elements_by_text(selector, use_smart_match=True)
-                    
-                    if not elements:
-                        return "未找到匹配的元素"
-                    
-                    # 如果有错误，直接返回
-                    if len(elements) == 1 and "error" in elements[0]:
-                        return str(elements[0]["error"])
-                    
-                    # 格式化返回结果，包含匹配置信度信息
-                    formatted_results = []
-                    for i, element in enumerate(elements[:10]):  # 最多返回10个结果
-                        result_info = {
-                            "index": i,
-                            "tag": element.get("tag", ""),
-                            "text": element.get("text", "")[:100],  # 限制文本长度
-                            "xpath": element.get("xpath", ""),
-                            "match_score": element.get("match_score", 0.0),
-                            "match_strategy": element.get("match_strategy", ""),
-                            "match_reason": element.get("match_reason", "")
-                        }
-                        formatted_results.append(result_info)
-                    
-                    return str(formatted_results)
-                else:
-                    # CSS选择器等其他类型的查找
-                    return str(self.dom_service.get_element_info(selector, selector_type))
+                # 使用统一的元素查找接口
+                elements = self.element_handler.find_elements_unified(
+                    selector, selector_type, limit, include_similar
+                )
+                
+                if not elements:
+                    return "未找到匹配的元素"
+                
+                # 如果有错误，直接返回
+                if len(elements) == 1 and "error" in elements[0]:
+                    return str(elements[0]["error"])
+                
+                return str(elements)
             except Exception as e:
                 logger.error(f"查找元素失败: {e}")
                 return f"查找元素失败: {str(e)}"
@@ -292,14 +288,22 @@ class DrissionPageMCP:
         # 网络监控工具
         @self.app.tool()
         async def enable_network_monitoring(filter_types: List[str] = None) -> str:
-            """启用网络监控"""
+            """启用网络监控
+            
+            Args:
+                filter_types: 需要监听的mimeType类型列表
+                
+            Returns:
+                str: 启用结果
+            """
+            # 原因：支持List[str]类型的多过滤器，使用新的多过滤器监听接口，副作用：无，回滚策略：还原单一过滤器逻辑
             try:
                 if not self.network_listener:
                     return "请先连接浏览器"
                 
-                # 修复：network_listener的方法都是同步的，且使用正确的方法名
+                # 使用多过滤器监听接口
                 if filter_types:
-                    return self.network_listener.setup_response_listener(filter_types[0] if filter_types else "application/json")
+                    return self.network_listener.setup_multi_filter_listener(filter_types)
                 else:
                     return self.network_listener.enable_network_domain()
             except Exception as e:
@@ -308,15 +312,21 @@ class DrissionPageMCP:
         
         @self.app.tool()
         async def get_network_logs(limit: int = 50) -> str:
-            """获取网络请求日志"""
+            """获取网络请求日志
+            
+            Args:
+                limit: 返回日志的最大数量
+                
+            Returns:
+                str: 网络日志数据
+            """
+            # 原因：使用新的限制数量接口，简化逻辑并提供更好的性能，副作用：无，回滚策略：还原原始逻辑
             try:
                 if not self.network_listener:
                     return "请先连接浏览器"
                 
-                # 修复：get_response_listener_data不是异步方法，且不接受limit参数
-                data = self.network_listener.get_response_listener_data()
-                # 限制返回的数据量
-                limited_data = data[-limit:] if len(data) > limit else data
+                # 使用新的限制数量接口
+                limited_data = self.network_listener.get_response_listener_data_limited(limit)
                 return str(limited_data)
             except Exception as e:
                 logger.error(f"获取网络日志失败: {e}")

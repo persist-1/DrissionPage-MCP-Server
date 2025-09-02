@@ -374,3 +374,203 @@ class ElementHandler:
                 return f"输入文本 {keys} 成功"
         except Exception as e:
             return f"发送按键失败: {str(e)}"
+    
+    def click_element_unified(self, selector: str, selector_type: str = "css", index: int = 0, 
+                             smart_feedback: bool = True, use_cache: bool = True) -> str:
+        """统一的元素点击接口
+        
+        Args:
+            selector: 元素选择器
+            selector_type: 选择器类型 (css, xpath, text, id, class, name, tag)
+            index: 元素索引（当有多个匹配时）
+            smart_feedback: 是否启用智能反馈
+            use_cache: 是否使用缓存
+            
+        Returns:
+            str: 点击结果
+        """
+        # 原因：统一选择器处理逻辑，支持多种选择器类型，副作用：无，回滚策略：还原原始方法
+        try:
+            element = None
+            
+            if selector_type == "xpath":
+                result = self.click_by_xpath(selector)
+                return str(result)
+            elif selector_type == "text":
+                return self.click_by_containing_text(selector, index if index > 0 else None)
+            elif selector_type == "css":
+                element = self.tab.ele(selector, index=index + 1)
+            elif selector_type == "id":
+                element = self.tab.ele(f"#{selector}", index=index + 1)
+            elif selector_type == "class":
+                element = self.tab.ele(f".{selector}", index=index + 1)
+            elif selector_type == "name":
+                element = self.tab.ele(f"[name='{selector}']", index=index + 1)
+            elif selector_type == "tag":
+                element = self.tab.ele(f"t:{selector}", index=index + 1)
+            else:
+                return f"不支持的选择器类型: {selector_type}"
+            
+            if element:
+                element.click()
+                return f"成功点击元素: {selector} (类型: {selector_type})"
+            else:
+                if smart_feedback:
+                    # 提供智能反馈，建议其他选择器类型
+                    suggestions = self._get_selector_suggestions(selector, selector_type)
+                    if suggestions:
+                        return f"未找到元素: {selector}\n建议尝试: {suggestions}"
+                return f"未找到元素: {selector} (类型: {selector_type})"
+                
+        except Exception as e:
+            return f"点击元素失败: {str(e)}"
+    
+    def _get_selector_suggestions(self, selector: str, failed_type: str) -> str:
+        """获取选择器建议
+        
+        Args:
+            selector: 原始选择器
+            failed_type: 失败的选择器类型
+            
+        Returns:
+            str: 建议信息
+        """
+        suggestions = []
+        
+        # 如果CSS选择器失败，尝试其他类型
+        if failed_type == "css":
+            # 检查是否可能是ID
+            if not selector.startswith("#") and not selector.startswith("."):
+                suggestions.append(f"ID选择器: selector_type='id'")
+                suggestions.append(f"类选择器: selector_type='class'")
+                suggestions.append(f"标签选择器: selector_type='tag'")
+        
+        # 如果ID选择器失败，建议CSS
+        elif failed_type == "id":
+            suggestions.append(f"CSS选择器: selector='#{selector}', selector_type='css'")
+        
+        # 如果类选择器失败，建议CSS
+        elif failed_type == "class":
+            suggestions.append(f"CSS选择器: selector='.{selector}', selector_type='css'")
+        
+        return "; ".join(suggestions[:3])  # 最多返回3个建议
+    
+    def find_elements_unified(self, selector: str, selector_type: str = "css", 
+                             limit: int = 10, include_similar: bool = True) -> List[Dict[str, Any]]:
+        """统一的元素查找接口
+        
+        Args:
+            selector: 元素选择器
+            selector_type: 选择器类型
+            limit: 返回元素数量限制
+            include_similar: 是否包含相似元素
+            
+        Returns:
+            List[Dict]: 找到的元素信息列表
+        """
+        # 原因：统一元素查找逻辑，支持多种选择器和智能匹配，副作用：无，回滚策略：使用原始查找方法
+        try:
+            elements = []
+            
+            if selector_type == "xpath":
+                found_elements = self.tab.eles(f"xpath:{selector}")
+            elif selector_type == "text":
+                # 文本查找使用智能匹配
+                if include_similar:
+                    return self._find_elements_by_text_smart(selector, limit)
+                else:
+                    found_elements = self.tab.eles(selector)
+            elif selector_type == "css":
+                found_elements = self.tab.eles(selector)
+            elif selector_type == "id":
+                found_elements = self.tab.eles(f"#{selector}")
+            elif selector_type == "class":
+                found_elements = self.tab.eles(f".{selector}")
+            elif selector_type == "name":
+                found_elements = self.tab.eles(f"[name='{selector}']")
+            elif selector_type == "tag":
+                found_elements = self.tab.eles(f"t:{selector}")
+            else:
+                return [{"error": f"不支持的选择器类型: {selector_type}"}]
+            
+            # 限制返回数量
+            found_elements = found_elements[:limit] if found_elements else []
+            
+            # 转换为统一格式
+            for i, elem in enumerate(found_elements):
+                try:
+                    elements.append({
+                        "index": i,
+                        "tag": elem.tag,
+                        "text": elem.text[:100] if elem.text else "",
+                        "xpath": elem.xpath,
+                        "selector_type": selector_type,
+                        "is_displayed": elem.is_displayed(),
+                        "attributes": {
+                            "id": elem.attr("id") or "",
+                            "class": elem.attr("class") or "",
+                            "name": elem.attr("name") or ""
+                        }
+                    })
+                except Exception as e:
+                    elements.append({
+                        "index": i,
+                        "error": f"获取元素信息失败: {str(e)}"
+                    })
+            
+            return elements
+            
+        except Exception as e:
+            return [{"error": f"查找元素失败: {str(e)}"}]
+    
+    def _find_elements_by_text_smart(self, text: str, limit: int) -> List[Dict[str, Any]]:
+        """智能文本查找元素
+        
+        Args:
+            text: 要查找的文本
+            limit: 数量限制
+            
+        Returns:
+            List[Dict]: 找到的元素信息
+        """
+        # 获取所有包含文本的元素
+        all_elements = self.tab.eles("*")
+        matching_elements = []
+        
+        # 使用智能匹配算法
+        matcher = TextMatcher(fuzzy_threshold=0.6, case_sensitive=False)
+        element_text_pairs = []
+        
+        for elem in all_elements:
+            elem_text = elem.text.strip() if elem.text else ""
+            if elem_text and len(elem_text) > 0:
+                element_text_pairs.append((elem, elem_text))
+        
+        match_results = matcher.match_elements(text, element_text_pairs)
+        
+        # 转换为统一格式
+        for i, result in enumerate(match_results[:limit]):
+            try:
+                matching_elements.append({
+                    "index": i,
+                    "tag": result.element.tag,
+                    "text": result.text[:100],
+                    "xpath": result.element.xpath,
+                    "selector_type": "text",
+                    "match_score": result.score,
+                    "match_strategy": result.strategy,
+                    "match_reason": result.reason,
+                    "is_displayed": result.element.is_displayed(),
+                    "attributes": {
+                        "id": result.element.attr("id") or "",
+                        "class": result.element.attr("class") or "",
+                        "name": result.element.attr("name") or ""
+                    }
+                })
+            except Exception as e:
+                matching_elements.append({
+                    "index": i,
+                    "error": f"获取元素信息失败: {str(e)}"
+                })
+        
+        return matching_elements
