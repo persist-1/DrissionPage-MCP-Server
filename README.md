@@ -210,6 +210,10 @@ drissionpage-mcp --log-level DEBUG
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
 
+## 📖 参考项目
+
+本项目基于 [DrissionPage](https://github.com/g1879/DrissionPage) 构建
+
 ---
 
 <div align="center">
