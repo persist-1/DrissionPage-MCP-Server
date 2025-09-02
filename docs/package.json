@@ -8,7 +8,6 @@
     "docs:preview": "vitepress preview site_config"
   },
   "dependencies": {
-    "mermaid": "^11.10.1",
     "vitepress-plugin-mermaid": "^2.0.17"
   }
 }

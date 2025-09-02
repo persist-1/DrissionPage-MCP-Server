@@ -18,10 +18,10 @@ permissions:
   pages: write
   id-token: write
 
-# 只允许同时进行一次部署，取消正在进行的运行以避免artifact冲突
+# 只允许同时进行一次部署，跳过正在进行的运行以避免artifact冲突
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   # 构建工作
@@ -56,7 +56,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/site_config/.vitepress/dist
-          retention-days: 1
 
   # 部署工作
   deploy:
