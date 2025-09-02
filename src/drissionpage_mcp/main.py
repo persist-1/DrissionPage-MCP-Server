@@ -76,9 +76,14 @@ class DrissionPageMCP:
                 if not self.browser_manager:
                     self.browser_manager = BrowserManager()
                 
-                result = await self.browser_manager.connect_or_open_browser(
-                    port=port, headless=headless, user_data_dir=user_data_dir
-                )
+                config = {
+                    "debug_port": port,
+                    "headless": headless
+                }
+                if user_data_dir:
+                    config["user_data_dir"] = user_data_dir
+                    
+                result = await self.browser_manager.connect_or_open_browser(config)
                 
                 # 初始化其他服务
                 if self.browser_manager.current_tab:

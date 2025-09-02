@@ -36,15 +36,14 @@ pip install -e ".[dev]"
 ### 启动服务器
 
 ```bash
-# 使用默认配置启动
+# 使用默认配置启动（STDIO模式）
 drissionpage-mcp
-
-# 或指定主机和端口
-drissionpage-mcp --host 0.0.0.0 --port 8080
 
 # 设置日志级别
 drissionpage-mcp --log-level DEBUG
 ```
+
+**注意**: 本MCP服务器运行在STDIO模式下，主要用于与AI助手集成，不支持HTTP服务器模式。
 
 ### 基本使用
 
@@ -116,7 +115,7 @@ REFINE/
 │       └── settings.py           # 配置设置
 ├── tests/                        # 测试目录
 ├── docs/                         # 文档目录
-├── examples/                     # 示例代码
+├── agent_zone/                   # 项目管理文档
 ├── pyproject.toml               # 项目配置
 └── README.md                    # 项目说明
 ```
@@ -264,8 +263,8 @@ pytest -m "unit"      # 只运行单元测试
 
 1. **浏览器连接失败**
    - 确保Chrome浏览器已安装
-   - 检查端口是否被占用
-   - 尝试使用不同的端口
+   - 检查浏览器是否正在运行
+   - 验证浏览器调试端口配置
 
 2. **元素找不到**
    - 检查选择器是否正确
