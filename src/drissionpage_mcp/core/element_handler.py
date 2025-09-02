@@ -426,7 +426,8 @@ class ElementHandler:
                 self._check_and_switch_to_latest_tab()
                 return str(result)
             elif selector_type == "text":
-                result = self.click_by_containing_text(selector, index if index > 0 else None)
+                # 原因：修复index参数传递bug，确保index=0能正确传递，副作用：无，回滚策略：还原原始条件判断
+                result = self.click_by_containing_text(selector, index)
                 # 原因：修复新标签页切换bug，点击后检查并切换到最新标签页，副作用：无，回滚策略：移除此段代码
                 self._check_and_switch_to_latest_tab()
                 return result
@@ -509,11 +510,33 @@ class ElementHandler:
             if selector_type == "xpath":
                 found_elements = self.tab.eles(f"xpath:{selector}")
             elif selector_type == "text":
-                # 文本查找使用智能匹配
-                if include_similar:
+                # 原因：修复文本搜索bug，改进精确匹配和智能匹配的处理逻辑，副作用：无，回滚策略：还原原始逻辑
+                # 首先尝试精确匹配
+                found_elements = self.tab.eles(selector)
+                
+                # 如果精确匹配失败且启用智能匹配，则使用智能匹配
+                if not found_elements and include_similar:
                     return self._find_elements_by_text_smart(selector, limit)
-                else:
-                    found_elements = self.tab.eles(selector)
+                
+                # 如果精确匹配失败且未启用智能匹配，尝试处理HTML实体
+                if not found_elements:
+                    # 处理常见的HTML实体
+                    import html
+                    normalized_selector = html.unescape(selector).strip()
+                    # 尝试去除多余空格的匹配
+                    normalized_selector = ' '.join(normalized_selector.split())
+                    found_elements = self.tab.eles(normalized_selector)
+                    
+                    # 如果仍然失败，尝试部分匹配
+                    if not found_elements:
+                        # 查找包含该文本的元素
+                        all_elements = self.tab.eles("*")
+                        found_elements = []
+                        for elem in all_elements:
+                            if elem.text and selector in elem.text.strip():
+                                found_elements.append(elem)
+                                if len(found_elements) >= limit:
+                                    break
             elif selector_type == "css":
                 found_elements = self.tab.eles(selector)
             elif selector_type == "id":
@@ -539,7 +562,7 @@ class ElementHandler:
                         "text": elem.text[:100] if elem.text else "",
                         "xpath": elem.xpath,
                         "selector_type": selector_type,
-                        "is_displayed": elem.is_displayed(),
+                        "is_displayed": getattr(elem, 'is_displayed', lambda: True)(),
                         "attributes": {
                             "id": elem.attr("id") or "",
                             "class": elem.attr("class") or "",
