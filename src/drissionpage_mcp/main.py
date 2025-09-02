@@ -380,15 +380,12 @@ class DrissionPageMCP:
         
         logger.info("所有服务模块初始化完成")
     
-    async def start_server(self, host: str = "localhost", port: int = 8000):
-        """启动MCP服务器"""
-        logger.info(f"启动DrissionPage MCP服务器: {host}:{port}")
-        await self.app.run(host=host, port=port)
-    
-    def run(self, host: str = "localhost", port: int = 8000):
+    def run(self):
         """运行MCP服务器"""
         try:
-            asyncio.run(self.start_server(host, port))
+            logger.info("启动DrissionPage MCP服务器 (STDIO模式)")
+
+            self.app.run()
         except KeyboardInterrupt:
             logger.info("服务器已停止")
         except Exception as e:
@@ -400,8 +397,6 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="DrissionPage MCP Server")
-    parser.add_argument("--host", default="localhost", help="服务器主机地址")
-    parser.add_argument("--port", type=int, default=8000, help="服务器端口")
     parser.add_argument("--log-level", default="INFO", help="日志级别")
     
     args = parser.parse_args()
@@ -411,7 +406,7 @@ def main():
     
     # 创建并运行服务器
     server = DrissionPageMCP()
-    server.run(host=args.host, port=args.port)
+    server.run()
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@
 
 from typing import Dict, Any, Optional
 from DrissionPage import Chromium, ChromiumOptions
-from DrissionPage import Chromium
 
 
 class BrowserManager:
@@ -44,7 +43,7 @@ class BrowserManager:
         self.current_tab = self.browser.latest_tab
 
         return {
-            "browser_address": self.browser._chromium_options.address,
+            "browser_address": co.address,
             "latest_tab_title": self.current_tab.title,
             "latest_tab_id": self.current_tab.tab_id,
         }
