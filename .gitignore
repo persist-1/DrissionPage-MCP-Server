@@ -19,3 +19,5 @@ test/
 
 .browsers/
 .pytest_cache
+docs/node_modules
+cache/

@@ -1,0 +1,72 @@
+# 构建 VitePress 站点并将其部署到 GitHub Pages
+name: Deploy DrissionPage-MCP-Server Docs
+
+on:
+  # 在针对 main 分支的推送上运行
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy.yml'
+
+  # 允许手动触发工作流程
+  workflow_dispatch:
+
+# 设置 GITHUB_TOKEN 的权限，以允许部署到 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 只允许同时进行一次部署，取消正在进行的运行以避免artifact冲突
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # 构建工作
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 如果未启用 lastUpdated，则不需要
+      # - uses: pnpm/action-setup@v3 # 如果使用 pnpm，请取消注释
+      # - uses: oven-sh/setup-bun@v1 # 如果使用 Bun，请取消注释
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: 'docs/package-lock.json'
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Install dependencies
+        run: |
+          cd docs
+          npm ci
+      - name: Build with VitePress
+        run: |
+          cd docs
+          npm run docs:build
+        env:
+          NODE_OPTIONS: --max_old_space_size=4096
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site_config/.vitepress/dist
+          retention-days: 1
+
+  # 部署工作
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    name: Deploy
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

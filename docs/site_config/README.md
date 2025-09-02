@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./docs/site_config/public/images/logo.png" alt="DrissionPage-MCP-Server Logo" width="200">
+<img src="/images/logo.png" alt="DrissionPage-MCP-Server Logo" width="200">
 
 # DrissionPage-MCP-Server
 
@@ -30,7 +30,9 @@
 git clone https://github.com/persist-1/DrissionPage-MCP-Server.git
 cd DrissionPage-MCP-Server/
 
-# 使用 uv 同步环境
+# 安装依赖
+pip install -e .
+# 或使用 uv（推荐）
 uv sync
 ```
 
@@ -58,21 +60,21 @@ drissionpage-mcp
       }
    }
 ```
-![MCP配置效果](docs/site_config/public/images/mcp配置效果(Trae%20ide).png)
+![MCP配置效果](/images/mcp配置效果(Trae%20ide).png)
 
 ## 📱 使用案例
 
 ### 网页自动化操作
 <div align="center">
-  <img src="docs/site_config/public/images/用例测试1.png" alt="用例测试1" width="45%">
-  <img src="docs/site_config/public/images/用例测试2.png" alt="用例测试2" width="45%">
+  <img src="/images/用例测试1.png" alt="用例测试1" width="45%">
+  <img src="/images/用例测试2.png" alt="用例测试2" width="45%">
 </div>
 
 ### 复杂页面交互
 <div align="center">
-  <img src="docs/site_config/public/images/用例测试3_1.png" alt="用例测试3_1" width="30%">
-  <img src="docs/site_config/public/images/用例测试3_2.png" alt="用例测试3_2" width="30%">
-  <img src="docs/site_config/public/images/用例测试3_3.png" alt="用例测试3_3" width="30%">
+  <img src="/images/用例测试3_1.png" alt="用例测试3_1" width="30%">
+  <img src="/images/用例测试3_2.png" alt="用例测试3_2" width="30%">
+  <img src="/images/用例测试3_3.png" alt="用例测试3_3" width="30%">
 </div>
 
 ### 基本使用示例
