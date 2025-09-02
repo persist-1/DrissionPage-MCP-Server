@@ -9,6 +9,46 @@ import os
 from pathlib import Path
 
 
+# 全局提示词配置
+GLOBAL_PROMPT = """
+🔧 DrissionPage MCP 自动化测试最佳实践指南
+
+⚠️ 重要提示：在进行任何元素操作前，请严格遵循以下工作流程：
+
+📋 标准化工作流程：
+1. 📸 视觉确认：使用 take_screenshot() 获取页面截图，确认目标元素存在
+2. 🔍 结构分析：使用 get_dom_tree() 或 get_page_text() 分析页面结构
+3. 🎯 精确定位：使用 find_elements() 或 get_element_text() 获取精确的元素信息
+4. ✅ 执行操作：基于准确信息构建选择器，执行点击、输入等操作
+
+🚫 严禁行为：
+- 禁止猜测或编造元素名称、ID、类名
+- 禁止在未确认元素存在的情况下直接操作
+- 禁止跳过预处理步骤直接使用选择器
+
+🎯 选择器优先级（按推荐顺序）：
+1. ID选择器：#element-id
+2. CSS类选择器：.class-name
+3. 属性选择器：[data-testid="value"]
+4. XPath选择器：//div[@class="example"]
+5. 文本匹配：仅作为辅助手段
+
+💡 针对非多模态LLM的特别说明：
+- 如果你具备图片理解能力，请结合截图进行更精确的元素定位
+- 如果你不具备图片理解能力，请更加依赖文本描述和DOM结构分析
+- 务必使用 get_page_text() 和 get_dom_tree() 获取详细的页面文本信息
+
+🔄 错误处理：
+- 元素未找到时，先检查页面是否完全加载
+- 使用 find_elements() 验证选择器的有效性
+- 考虑使用等待机制或重试策略
+
+📊 性能优化：
+- 优先使用缓存机制（use_cache=True）
+- 批量操作时考虑使用智能反馈（smart_feedback=True）
+- 避免重复的DOM查询操作
+"""
+
 # 默认配置
 DEFAULT_CONFIG = {
     "browser": {
