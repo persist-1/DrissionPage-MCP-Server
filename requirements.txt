@@ -1,0 +1,8 @@
+# Core dependencies
+DrissionPage>=4.0.0
+fastmcp>=0.2.0
+mcp>=1.0.0
+typing-extensions>=4.0.0
+
+# Development dependencies (optional)
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
