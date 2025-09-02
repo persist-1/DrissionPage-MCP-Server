@@ -125,6 +125,59 @@ export DRISSIONPAGE_MCP_DOWNLOAD_PATH=/path/to/downloads
 export DRISSIONPAGE_MCP_SCREENSHOT_PATH=/path/to/screenshots
 ```
 
+## 🏗️ 项目架构
+
+```
+DrissionPage-MCP-Server/
+├── .github/                    # GitHub 配置
+│   ├── ISSUE_TEMPLATE/         # Issue 模板
+│   └── workflows/              # GitHub Actions 工作流
+│       └── deploy.yml          # 自动部署配置
+├── browsers/                   # 浏览器相关文件
+│   ├── chrome-portable/        # 便携版 Chrome（可选）
+│   └── readme_please.md        # 浏览器使用说明
+├── docs/                       # 文档目录
+│   ├── site_config/            # VitePress 文档站点
+│   │   ├── .vitepress/         # VitePress 配置
+│   │   ├── public/             # 静态资源（图片等）
+│   │   ├── *.md               # 各类文档文件
+│   │   └── index.md           # 文档首页
+│   ├── package.json           # 文档站点依赖
+│   └── ds_run_dev.bat         # 开发脚本
+├── src/                        # 源代码目录
+│   └── drissionpage_mcp/       # 主要代码包
+│       ├── config/             # 配置模块
+│       │   └── settings.py     # 环境配置和设置
+│       ├── core/               # 核心功能模块
+│       │   ├── browser_manager.py    # 浏览器管理
+│       │   ├── element_handler.py    # 元素操作处理
+│       │   ├── file_handler.py       # 文件操作处理
+│       │   └── network_listener.py   # 网络监听
+│       ├── services/           # 服务层
+│       │   ├── cdp_service.py        # Chrome DevTools 协议服务
+│       │   ├── dom_service.py        # DOM 操作服务
+│       │   └── screenshot_service.py # 截图服务
+│       ├── utils/              # 工具模块
+│       │   ├── helpers.py            # 辅助函数
+│       │   └── text_matcher.py      # 文本匹配工具
+│       └── main.py             # MCP 服务入口
+├── tests/                      # 测试目录
+│   ├── integration/            # 集成测试
+│   ├── check_browser.py        # 浏览器检查脚本
+│   └── local_build_test.ps1    # 本地构建测试
+├── pyproject.toml              # Python 项目配置
+├── requirements*.txt           # Python 依赖文件
+├── pytest.ini                 # 测试配置
+└── uv.lock                     # UV 锁定文件
+```
+
+### 核心模块说明
+
+- **core/**: 核心业务逻辑，包含浏览器管理、元素操作、文件处理等
+- **services/**: 服务层，提供 CDP、DOM、截图等专业服务
+- **config/**: 配置管理，处理环境变量和系统设置
+- **utils/**: 通用工具，提供辅助函数和文本处理能力
+
 ## 📚 文档
 
 - 📖 **[在线文档](https://persist-1.github.io/DrissionPage-MCP-Server/)** - 完整的项目文档
