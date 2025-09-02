@@ -433,7 +433,8 @@ class DrissionPageMCP:
         tab = self.browser_manager.current_tab
         
         # 初始化核心服务
-        self.element_handler = ElementHandler(tab)
+        # 原因：修复新标签页切换bug，传入browser_manager以支持标签页自动切换，副作用：无，回滚策略：移除browser_manager参数
+        self.element_handler = ElementHandler(tab, self.browser_manager)
         self.network_listener = NetworkListener(tab)
         self.file_handler = FileHandler(tab)
         

@@ -16,8 +16,9 @@ class ElementHandler:
     负责网页元素的各种操作，包括查找、点击、输入等。
     """
     
-    def __init__(self, tab):
+    def __init__(self, tab, browser_manager=None):
         self.tab = tab
+        self.browser_manager = browser_manager  # 原因：添加browser_manager引用以支持标签页切换，副作用：无，回滚策略：移除此参数
     
     def click_by_xpath(self, xpath: str) -> Dict[str, Any]:
         """通过XPath点击元素
@@ -33,6 +34,8 @@ class ElementHandler:
         
         if element:
             element.click()
+            # 原因：修复新标签页切换bug，点击后检查并切换到最新标签页，副作用：无，回滚策略：移除此行
+            self._check_and_switch_to_latest_tab()
             return {"locator": locator, "result": "点击成功"}
         else:
             return {"error": f"元素{locator}不存在，需要先获取元素信息"}
@@ -74,6 +77,8 @@ class ElementHandler:
         # 如果只找到一个元素，直接点击它
         if len(elements) == 1:
             elements[0].click()
+            # 原因：修复新标签页切换bug，点击后检查并切换到最新标签页，副作用：无，回滚策略：移除此行
+            self._check_and_switch_to_latest_tab()
             return f"点击成功（{match_type}）"
         
         # 如果找到多个元素
@@ -86,6 +91,8 @@ class ElementHandler:
                 # 根据指定索引点击对应的元素
                 if 0 <= index < len(elements):
                     elements[index].click()
+                    # 原因：修复新标签页切换bug，点击后检查并切换到最新标签页，副作用：无，回滚策略：移除此行
+                    self._check_and_switch_to_latest_tab()
                     return f"点击成功（{match_type}，索引{index}）"
                 else:
                     return f"索引{index}超出范围，共有{len(elements)}个元素"
@@ -270,6 +277,26 @@ class ElementHandler:
         
         return clickable_elements
     
+    def _check_and_switch_to_latest_tab(self):
+        """检查并切换到最新标签页
+        
+        原因：修复新标签页切换bug，当点击链接打开新标签页时自动切换
+        副作用：无，回滚策略：移除此方法
+        """
+        if self.browser_manager and self.browser_manager.browser:
+            try:
+                # 获取最新标签页
+                latest_tab = self.browser_manager.browser.latest_tab
+                
+                # 如果最新标签页与当前标签页不同，则切换
+                if latest_tab and latest_tab.tab_id != self.tab.tab_id:
+                    self.tab = latest_tab
+                    self.browser_manager.current_tab = latest_tab
+                    print(f"已切换到新标签页: {latest_tab.title} - {latest_tab.url}")
+            except Exception as e:
+                # 静默处理异常，不影响主要功能
+                print(f"切换标签页时出现异常: {e}")
+    
     def get_all_input_elements(self) -> List[Dict[str, Any]]:
         """获取页面所有可输入元素的信息
         
@@ -395,9 +422,14 @@ class ElementHandler:
             
             if selector_type == "xpath":
                 result = self.click_by_xpath(selector)
+                # 原因：修复新标签页切换bug，点击后检查并切换到最新标签页，副作用：无，回滚策略：移除此段代码
+                self._check_and_switch_to_latest_tab()
                 return str(result)
             elif selector_type == "text":
-                return self.click_by_containing_text(selector, index if index > 0 else None)
+                result = self.click_by_containing_text(selector, index if index > 0 else None)
+                # 原因：修复新标签页切换bug，点击后检查并切换到最新标签页，副作用：无，回滚策略：移除此段代码
+                self._check_and_switch_to_latest_tab()
+                return result
             elif selector_type == "css":
                 element = self.tab.ele(selector, index=index + 1)
             elif selector_type == "id":
@@ -413,6 +445,8 @@ class ElementHandler:
             
             if element:
                 element.click()
+                # 原因：修复新标签页切换bug，点击后检查并切换到最新标签页，副作用：无，回滚策略：移除此段代码
+                self._check_and_switch_to_latest_tab()
                 return f"成功点击元素: {selector} (类型: {selector_type})"
             else:
                 if smart_feedback:
