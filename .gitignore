@@ -17,6 +17,7 @@ test.py
 agent_zone/
 test/
 
+browsers/
 .browsers/
 .pytest_cache
 docs/node_modules
