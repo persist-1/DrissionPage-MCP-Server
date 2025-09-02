@@ -16,3 +16,6 @@ test.py
 .venv
 agent_zone/
 test/
+
+.browsers/
+.pytest_cache
