@@ -7,6 +7,7 @@
 from typing import Dict, Any, List, Optional, Union
 from DrissionPage import Chromium
 from DrissionPage.common import Keys
+from ..utils.text_matcher import TextMatcher, MatchResult
 
 
 class ElementHandler:
@@ -37,7 +38,7 @@ class ElementHandler:
             return {"error": f"元素{locator}不存在，需要先获取元素信息"}
     
     def click_by_containing_text(self, content: str, index: Optional[int] = None) -> str:
-        """根据包含指定文本的方式点击网页元素
+        """根据包含指定文本的方式点击网页元素（智能匹配版本）
         
         Args:
             content: 要查找的文本内容
@@ -46,31 +47,161 @@ class ElementHandler:
         Returns:
             str: 点击结果说明，或错误提示
         """
-        # 获取包含指定文本的所有元素，等待最多 3 秒
-        elements = self.tab.eles(content, timeout=3)
-
-        # 如果没有匹配到任何元素，返回错误提示
-        if len(elements) == 0:
-            return f"元素{content}不存在，需要先获取元素信息"
+        # 原因：优化文本匹配逻辑，解决精确性和灵活性问题，副作用：无，回滚策略：还原原始逻辑
         
+        # 首先尝试精确匹配（保持向后兼容）
+        exact_elements = self.tab.eles(content, timeout=3)
+        
+        # 如果精确匹配找到元素，使用原有逻辑处理
+        if exact_elements:
+            return self._handle_matched_elements(exact_elements, content, index, "精确匹配")
+        
+        # 如果精确匹配失败，使用智能匹配算法
+        return self._smart_text_match_and_click(content, index)
+    
+    def _handle_matched_elements(self, elements: List, content: str, index: Optional[int], match_type: str) -> str:
+        """处理匹配到的元素列表
+        
+        Args:
+            elements: 匹配到的元素列表
+            content: 搜索文本
+            index: 指定索引
+            match_type: 匹配类型说明
+            
+        Returns:
+            str: 处理结果
+        """
         # 如果只找到一个元素，直接点击它
         if len(elements) == 1:
             elements[0].click()
-            return "点击成功"
+            return f"点击成功（{match_type}）"
         
         # 如果找到多个元素
         if len(elements) > 1:
             # 如果未指定 index，提示用户提供索引
             if index is None:
                 element_info = [f"索引{i}: {elem.tag} - {elem.text[:50]}" for i, elem in enumerate(elements)]
-                return f"元素{content}存在多个，请调整 index 参数，index=0表示第一个元素。\n可选元素：\n" + "\n".join(element_info)
+                return f"元素{content}存在多个（{match_type}），请调整 index 参数，index=0表示第一个元素。\n可选元素：\n" + "\n".join(element_info)
             else:
                 # 根据指定索引点击对应的元素
                 if 0 <= index < len(elements):
                     elements[index].click()
-                    return "点击成功"
+                    return f"点击成功（{match_type}，索引{index}）"
                 else:
                     return f"索引{index}超出范围，共有{len(elements)}个元素"
+        
+        return f"未找到匹配元素"
+    
+    def _smart_text_match_and_click(self, content: str, index: Optional[int]) -> str:
+        """使用智能文本匹配算法查找并点击元素
+        
+        Args:
+            content: 要查找的文本内容
+            index: 指定索引
+            
+        Returns:
+            str: 点击结果
+        """
+        # 获取页面所有可点击元素
+        clickable_elements = self._get_clickable_elements()
+        
+        if not clickable_elements:
+            return f"页面中未找到可点击元素"
+        
+        # 准备元素文本对
+        element_text_pairs = []
+        for elem in clickable_elements:
+            elem_text = elem.text.strip() if elem.text else ""
+            if elem_text:  # 只处理有文本的元素
+                element_text_pairs.append((elem, elem_text))
+        
+        if not element_text_pairs:
+            return f"页面中未找到包含文本的可点击元素"
+        
+        # 使用智能匹配算法
+        matcher = TextMatcher(fuzzy_threshold=0.6, case_sensitive=False)
+        match_results = matcher.match_elements(content, element_text_pairs)
+        
+        if not match_results:
+            return f"未找到与'{content}'匹配的元素，建议检查文本内容或使用更宽泛的关键词"
+        
+        # 如果指定了索引
+        if index is not None:
+            if 0 <= index < len(match_results):
+                selected_result = match_results[index]
+                selected_result.element.click()
+                return f"点击成功（{selected_result.strategy}匹配，置信度{selected_result.score:.2f}，索引{index}）\n匹配原因：{selected_result.reason}"
+            else:
+                return f"索引{index}超出范围，共找到{len(match_results)}个匹配元素"
+        
+        # 未指定索引时的处理
+        best_match = match_results[0]
+        
+        # 如果最佳匹配置信度很高（>=0.9），直接点击
+        if best_match.score >= 0.9:
+            best_match.element.click()
+            return f"点击成功（{best_match.strategy}匹配，置信度{best_match.score:.2f}）\n匹配原因：{best_match.reason}"
+        
+        # 如果置信度较低，提供多个选项让用户选择
+        if len(match_results) > 1:
+            element_info = []
+            for i, result in enumerate(match_results[:5]):  # 最多显示5个选项
+                element_info.append(
+                    f"索引{i}: {result.element.tag} - {result.text[:50]} "
+                    f"(置信度: {result.score:.2f}, 策略: {result.strategy})"
+                )
+            
+            return (
+                f"找到多个可能匹配的元素，请使用 index 参数指定：\n" +
+                "\n".join(element_info) +
+                f"\n\n最佳匹配：{best_match.reason}"
+            )
+        else:
+            # 只有一个匹配，但置信度不高，询问用户确认
+            best_match.element.click()
+            return (
+                f"点击成功（{best_match.strategy}匹配，置信度{best_match.score:.2f}）\n"
+                f"匹配原因：{best_match.reason}\n"
+                f"注意：置信度较低，如果结果不符合预期，请使用更精确的文本描述"
+            )
+    
+    def _get_clickable_elements(self) -> List:
+        """获取页面中所有可点击的元素
+        
+        Returns:
+            List: 可点击元素列表
+        """
+        # 获取常见的可点击元素
+        clickable_selectors = [
+            'button', 'a', 'input[type="button"]', 'input[type="submit"]',
+            '[onclick]', '[role="button"]', '.btn', '.button',
+            'span[onclick]', 'div[onclick]', 'li[onclick]'
+        ]
+        
+        clickable_elements = []
+        for selector in clickable_selectors:
+            try:
+                elements = self.tab.eles(f'css:{selector}', timeout=1)
+                clickable_elements.extend(elements)
+            except:
+                continue
+        
+        # 去重（基于元素的位置和文本）
+        unique_elements = []
+        seen_elements = set()
+        
+        for elem in clickable_elements:
+            try:
+                # 使用元素的位置和文本作为唯一标识
+                elem_id = (elem.rect.location, elem.text[:20] if elem.text else "")
+                if elem_id not in seen_elements:
+                    seen_elements.add(elem_id)
+                    unique_elements.append(elem)
+            except:
+                # 如果获取位置失败，仍然添加元素
+                unique_elements.append(elem)
+        
+        return unique_elements
     
     def input_by_xpath(self, xpath: str, input_value: str, clear_first: bool = True) -> Dict[str, Any]:
         """通过XPath给元素输入内容

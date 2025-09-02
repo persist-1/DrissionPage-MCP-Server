@@ -32,23 +32,40 @@ class BrowserManager:
         if config is None:
             config = {'debug_port': 9222}
             
-        co = ChromiumOptions()
-        
-        if config.get("debug_port"):
-            co.set_local_port(config["debug_port"])
-        if config.get("browser_path"):
-            co.set_browser_path(config["browser_path"])
-        if config.get("headless", False):
-            co.headless(True)
+        try:
+            co = ChromiumOptions()
+            
+            if config.get("debug_port"):
+                co.set_local_port(config["debug_port"])
+            if config.get("browser_path"):
+                co.set_browser_path(config["browser_path"])
+            if config.get("headless", False):
+                co.headless(True)
+            if config.get("user_data_dir"):
+                co.set_user_data_path(config["user_data_dir"])
 
-        self.browser = Chromium(co)
-        self.current_tab = self.browser.latest_tab
+            self.browser = Chromium(co)
+            
+            # 验证浏览器连接是否成功
+            if not self.browser:
+                raise Exception("浏览器连接失败")
+                
+            self.current_tab = self.browser.latest_tab
+            
+            # 验证标签页是否可用
+            if not self.current_tab:
+                raise Exception("无法获取浏览器标签页")
 
-        return {
-            "browser_address": co.address,
-            "latest_tab_title": self.current_tab.title,
-            "latest_tab_id": self.current_tab.tab_id,
-        }
+            return {
+                "browser_address": co.address,
+                "latest_tab_title": self.current_tab.title,
+                "latest_tab_id": self.current_tab.tab_id,
+            }
+        except Exception as e:
+            # 清理失败的连接
+            self.browser = None
+            self.current_tab = None
+            raise Exception(f"浏览器连接失败: {str(e)}")
     
     def _setup_chrome_path(self):
         """自动配置Chrome路径，优先使用便携版Chrome"""

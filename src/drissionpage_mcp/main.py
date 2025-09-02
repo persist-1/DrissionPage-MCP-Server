@@ -250,17 +250,40 @@ class DrissionPageMCP:
         
         @self.app.tool()
         async def find_elements(selector: str, selector_type: str = "css") -> str:
-            """查找页面元素"""
+            """查找页面元素（支持智能文本匹配）"""
+            # 原因：集成智能文本匹配算法，提升元素查找的精确性和灵活性，副作用：无，回滚策略：移除智能匹配相关代码
             try:
                 if not self.dom_service:
                     return "请先连接浏览器"
                 
                 if selector_type == "text":
-                    # 修复：使用正确的方法名 search_elements_by_text
-                    elements = self.dom_service.search_elements_by_text(selector)
-                    return str(elements)
+                    # 使用智能文本匹配搜索元素
+                    elements = self.dom_service.search_elements_by_text(selector, use_smart_match=True)
+                    
+                    if not elements:
+                        return "未找到匹配的元素"
+                    
+                    # 如果有错误，直接返回
+                    if len(elements) == 1 and "error" in elements[0]:
+                        return str(elements[0]["error"])
+                    
+                    # 格式化返回结果，包含匹配置信度信息
+                    formatted_results = []
+                    for i, element in enumerate(elements[:10]):  # 最多返回10个结果
+                        result_info = {
+                            "index": i,
+                            "tag": element.get("tag", ""),
+                            "text": element.get("text", "")[:100],  # 限制文本长度
+                            "xpath": element.get("xpath", ""),
+                            "match_score": element.get("match_score", 0.0),
+                            "match_strategy": element.get("match_strategy", ""),
+                            "match_reason": element.get("match_reason", "")
+                        }
+                        formatted_results.append(result_info)
+                    
+                    return str(formatted_results)
                 else:
-                    # 修复：使用正确的方法名，且不是异步方法
+                    # CSS选择器等其他类型的查找
                     return str(self.dom_service.get_element_info(selector))
             except Exception as e:
                 logger.error(f"查找元素失败: {e}")

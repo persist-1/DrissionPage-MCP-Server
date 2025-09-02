@@ -6,6 +6,7 @@
 
 from typing import Dict, Any, Optional, List
 from DrissionPage import Chromium
+from ..utils.text_matcher import TextMatcher, MatchResult
 
 
 class DOMService:
@@ -272,40 +273,128 @@ class DOMService:
         except Exception as e:
             return {"error": f"获取页面结构失败: {str(e)}"}
     
-    def search_elements_by_text(self, text: str, tag: Optional[str] = None) -> List[Dict[str, Any]]:
-        """根据文本内容搜索元素
+    def search_elements_by_text(self, text: str, tag: Optional[str] = None, use_smart_match: bool = True) -> List[Dict[str, Any]]:
+        """根据文本内容搜索元素（智能匹配版本）
         
         Args:
             text: 要搜索的文本
             tag: 限制搜索的标签类型，可选
+            use_smart_match: 是否使用智能匹配算法，默认为True
             
         Returns:
-            list: 匹配的元素列表
+            list: 匹配的元素列表，包含匹配置信度信息
         """
+        # 原因：集成智能文本匹配算法，提升搜索精确性和灵活性，副作用：无，回滚策略：设置use_smart_match=False
+        
         try:
-            elements = []
-            
             # 构建搜索选择器
             if tag:
                 search_elements = self.tab.eles(f'tag:{tag}')
             else:
                 search_elements = self.tab.eles('tag:*')
             
-            for element in search_elements:
-                if element.text and text.lower() in element.text.lower():
-                    elements.append({
-                        "tag": element.tag,
-                        "text": element.text[:100],  # 限制文本长度
-                        "xpath": element.xpath,
-                        "attributes": {
-                            "id": element.attr('id') or '',
-                            "class": element.attr('class') or ''
-                        }
-                    })
+            if not search_elements:
+                return []
             
-            return elements
+            # 如果不使用智能匹配，使用原有逻辑
+            if not use_smart_match:
+                return self._legacy_text_search(text, search_elements)
+            
+            # 使用智能匹配算法
+            return self._smart_text_search(text, search_elements)
+            
         except Exception as e:
             return [{"error": f"搜索元素失败: {str(e)}"}]
+    
+    def _legacy_text_search(self, text: str, search_elements: List) -> List[Dict[str, Any]]:
+        """传统文本搜索方法（向后兼容）
+        
+        Args:
+            text: 搜索文本
+            search_elements: 搜索范围内的元素列表
+            
+        Returns:
+            list: 匹配的元素列表
+        """
+        elements = []
+        
+        for element in search_elements:
+            if element.text and text.lower() in element.text.lower():
+                elements.append({
+                    "tag": element.tag,
+                    "text": element.text[:100],  # 限制文本长度
+                    "xpath": element.xpath,
+                    "attributes": {
+                        "id": element.attr('id') or '',
+                        "class": element.attr('class') or ''
+                    },
+                    "match_score": 0.8,  # 传统匹配给固定分数
+                    "match_strategy": "legacy_contains",
+                    "match_reason": f"传统包含匹配: '{element.text[:50]}' 包含 '{text}'"
+                })
+        
+        return elements
+    
+    def _smart_text_search(self, text: str, search_elements: List) -> List[Dict[str, Any]]:
+        """智能文本搜索方法
+        
+        Args:
+            text: 搜索文本
+            search_elements: 搜索范围内的元素列表
+            
+        Returns:
+            list: 匹配的元素列表，按置信度排序
+        """
+        # 准备元素文本对
+        element_text_pairs = []
+        for element in search_elements:
+            element_text = element.text.strip() if element.text else ""
+            if element_text:  # 只处理有文本的元素
+                element_text_pairs.append((element, element_text))
+        
+        if not element_text_pairs:
+            return []
+        
+        # 使用智能匹配算法
+        matcher = TextMatcher(fuzzy_threshold=0.6, case_sensitive=False)
+        match_results = matcher.match_elements(text, element_text_pairs)
+        
+        # 转换为标准格式
+        formatted_results = []
+        for match_result in match_results:
+            element = match_result.element
+            formatted_results.append({
+                "tag": element.tag,
+                "text": element.text[:100],  # 限制文本长度
+                "xpath": element.xpath,
+                "attributes": {
+                    "id": element.attr('id') or '',
+                    "class": element.attr('class') or ''
+                },
+                "match_score": match_result.score,
+                "match_strategy": match_result.strategy,
+                "match_reason": match_result.reason
+            })
+        
+        return formatted_results
+    
+    def get_best_text_match(self, text: str, tag: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """获取最佳文本匹配结果
+        
+        Args:
+            text: 要搜索的文本
+            tag: 限制搜索的标签类型，可选
+            
+        Returns:
+            dict: 最佳匹配结果，如果没有匹配则返回None
+        """
+        results = self.search_elements_by_text(text, tag, use_smart_match=True)
+        
+        if not results or (len(results) == 1 and "error" in results[0]):
+            return None
+        
+        # 返回置信度最高的结果
+        return results[0] if results else None
     
     def get_form_data(self, form_xpath: Optional[str] = None) -> Dict[str, Any]:
         """获取表单数据
