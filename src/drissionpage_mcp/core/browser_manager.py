@@ -4,6 +4,7 @@
 负责浏览器的启动、连接、标签页管理等核心功能。
 """
 
+import os
 from typing import Dict, Any, Optional
 from DrissionPage import Chromium, ChromiumOptions
 
@@ -17,6 +18,7 @@ class BrowserManager:
     def __init__(self):
         self.browser: Optional[Chromium] = None
         self.current_tab = None
+        self._setup_chrome_path()
     
     async def connect_or_open_browser(self, config: Dict[str, Any] = None) -> Dict[str, Any]:
         """打开或接管已打开的浏览器
@@ -47,6 +49,44 @@ class BrowserManager:
             "latest_tab_title": self.current_tab.title,
             "latest_tab_id": self.current_tab.tab_id,
         }
+    
+    def _setup_chrome_path(self):
+        """自动配置Chrome路径，优先使用便携版Chrome"""
+        # 项目根目录
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        
+        # 便携版Chrome路径（优先级最高）
+        portable_chrome_paths = [
+            os.path.join(project_root, 'browsers', 'chrome-portable', 'chrome.exe'),
+            os.path.join(project_root, 'browsers', 'chrome-portable', 'GoogleChromePortable.exe'),
+        ]
+        
+        # 系统安装的Chrome路径
+        system_chrome_paths = [
+            r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+            r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+            r'C:\Users\{}\AppData\Local\Google\Chrome\Application\chrome.exe'.format(os.getenv('USERNAME', '')),
+            # Edge作为备选
+            r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+        ]
+        
+        # 合并路径列表，便携版优先
+        all_paths = portable_chrome_paths + system_chrome_paths
+        
+        for path in all_paths:
+            if os.path.exists(path):
+                try:
+                    ChromiumOptions().set_browser_path(path).save()
+                    print(f"已配置浏览器路径: {path}")
+                    if path in portable_chrome_paths:
+                        print("✅ 使用项目内置便携版Chrome")
+                    return
+                except Exception as e:
+                    continue
+        
+        print("⚠️ 未找到Chrome或Edge浏览器")
+        print("请下载便携版Chrome到 browsers/chrome-portable/ 目录")
+        print("或安装系统版Chrome浏览器")
     
     async def new_tab(self, url: str) -> Dict[str, Any]:
         """打开新标签页并访问指定网址
