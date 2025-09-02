@@ -150,23 +150,10 @@ class DOMService:
             if not element:
                 return {"error": f"元素 {xpath} 不存在"}
             
-            return {
-                "tag": element.tag,
-                "text": element.text,
-                "inner_html": element.inner_html,
-                "outer_html": element.outer_html,
-                "xpath": element.xpath,
-                "css_path": element.css_path,
-                "is_displayed": element.is_displayed(),
-                "is_enabled": element.is_enabled(),
-                "location": {
-                    "x": element.location[0] if element.location else 0,
-                    "y": element.location[1] if element.location else 0
-                },
-                "size": {
-                    "width": element.size[0] if element.size else 0,
-                    "height": element.size[1] if element.size else 0
-                },
+            # 修复：DrissionPage的ChromiumElement属性访问需要更安全的方式
+            element_info = {
+                "tag": getattr(element, 'tag', ''),
+                "text": getattr(element, 'text', '') or '',
                 "attributes": {
                     "id": element.attr('id') or '',
                     "class": element.attr('class') or '',
@@ -177,6 +164,65 @@ class DOMService:
                     "src": element.attr('src') or ''
                 }
             }
+            
+            # 安全地获取HTML内容和其他属性
+            try:
+                # 基本属性
+                if hasattr(element, 'xpath'):
+                    element_info["xpath"] = element.xpath
+                
+                # HTML内容
+                if hasattr(element, 'inner_html'):
+                    element_info["inner_html"] = element.inner_html
+                
+                # CSS路径
+                if hasattr(element, 'css_path'):
+                    element_info["css_path"] = element.css_path
+                
+                # 状态检查 - 使用更安全的方式
+                try:
+                    if hasattr(element, 'is_displayed'):
+                        element_info["is_displayed"] = element.is_displayed()
+                    else:
+                        # 如果没有is_displayed方法，检查style属性
+                        display_style = element.attr('style') or ''
+                        element_info["is_displayed"] = 'display:none' not in display_style.replace(' ', '')
+                except:
+                    element_info["is_displayed"] = True  # 默认为可见
+                
+                try:
+                    if hasattr(element, 'is_enabled'):
+                        element_info["is_enabled"] = element.is_enabled()
+                    else:
+                        # 检查disabled属性
+                        element_info["is_enabled"] = not element.attr('disabled')
+                except:
+                    element_info["is_enabled"] = True  # 默认为启用
+                
+                # 位置和尺寸
+                try:
+                    if hasattr(element, 'location') and element.location:
+                        element_info["location"] = {
+                            "x": element.location[0],
+                            "y": element.location[1]
+                        }
+                except:
+                    pass
+                
+                try:
+                    if hasattr(element, 'size') and element.size:
+                        element_info["size"] = {
+                            "width": element.size[0],
+                            "height": element.size[1]
+                        }
+                except:
+                    pass
+                    
+            except Exception as attr_error:
+                # 如果获取某些属性失败，记录但不影响主要功能
+                element_info["warning"] = f"部分属性获取失败: {str(attr_error)}"
+            
+            return element_info
         except Exception as e:
             return {"error": f"获取元素信息失败: {str(e)}"}
     

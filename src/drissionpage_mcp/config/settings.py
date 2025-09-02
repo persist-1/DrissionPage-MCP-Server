@@ -360,14 +360,27 @@ def get_work_directory() -> Path:
     return Path.cwd()
 
 
+def get_drissionpage_mcp_directory() -> Path:
+    """获取DrissionPage MCP专用目录
+    
+    Returns:
+        Path: DrissionPage MCP目录路径
+    """
+    import os
+    # 使用用户主目录下的drissionpage_mcp目录
+    base_dir = Path.home() / "drissionpage_mcp"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    return base_dir
+
+
 def get_screenshots_directory() -> Path:
     """获取截图目录
     
     Returns:
         Path: 截图目录路径
     """
-    base_dir = get_work_directory()
-    screenshots_dir = base_dir / get_config_value('screenshot.save_path', 'screenshots')
+    base_dir = get_drissionpage_mcp_directory()
+    screenshots_dir = base_dir / "screenshot"
     screenshots_dir.mkdir(parents=True, exist_ok=True)
     return screenshots_dir
 
@@ -378,8 +391,8 @@ def get_downloads_directory() -> Path:
     Returns:
         Path: 下载目录路径
     """
-    base_dir = get_work_directory()
-    downloads_dir = base_dir / get_config_value('file.save_path', 'downloads')
+    base_dir = get_drissionpage_mcp_directory()
+    downloads_dir = base_dir / "file" / "downloads"
     downloads_dir.mkdir(parents=True, exist_ok=True)
     return downloads_dir
 
@@ -390,11 +403,34 @@ def get_logs_directory() -> Path:
     Returns:
         Path: 日志目录路径
     """
-    base_dir = get_work_directory()
-    log_file_path = get_config_value('logging.file_path', 'logs/drissionpage_mcp.log')
-    logs_dir = base_dir / Path(log_file_path).parent
+    base_dir = get_drissionpage_mcp_directory()
+    logs_dir = base_dir / 'logs'
     logs_dir.mkdir(parents=True, exist_ok=True)
     return logs_dir
+
+
+def get_cookies_directory() -> Path:
+    """获取Cookies存储目录
+    
+    Returns:
+        Path: Cookies目录路径
+    """
+    base_dir = get_drissionpage_mcp_directory()
+    cookies_dir = base_dir / "file" / "cookies"
+    cookies_dir.mkdir(parents=True, exist_ok=True)
+    return cookies_dir
+
+
+def get_page_source_directory() -> Path:
+    """获取页面源码存储目录
+    
+    Returns:
+        Path: 页面源码目录路径
+    """
+    base_dir = get_drissionpage_mcp_directory()
+    page_source_dir = base_dir / "file" / "page_source"
+    page_source_dir.mkdir(parents=True, exist_ok=True)
+    return page_source_dir
 
 
 def validate_config() -> List[str]:

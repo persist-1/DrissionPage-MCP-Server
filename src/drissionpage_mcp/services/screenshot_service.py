@@ -21,25 +21,40 @@ class ScreenshotService:
         self.tab = tab
     
     def capture_page(self, 
-                    path: str = ".", 
-                    name: str = "screenshot.png", 
+                    path: str = None, 
+                    name: str = None, 
                     full_page: bool = False) -> str:
         """捕获页面截图
         
         Args:
-            path: 保存路径
-            name: 文件名
+            path: 保存路径，如果为None则使用默认截图目录
+            name: 文件名，如果为None则使用带时间戳的默认名称
             full_page: 是否截取完整页面
             
         Returns:
             str: 截图文件路径或错误信息
         """
         try:
+            from ..config.settings import get_screenshots_directory
+            
+            # 确定截图类型和目录
+            screenshot_type = "fullpage" if full_page else "viewport"
+            
+            if not path:
+                base_dir = get_screenshots_directory()
+                path = base_dir / screenshot_type
+            else:
+                path = Path(path)
+            
+            if not name:
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name = f"{screenshot_type}_{timestamp}.png"
+            
             # 确保路径存在
-            Path(path).mkdir(parents=True, exist_ok=True)
+            path.mkdir(parents=True, exist_ok=True)
             
             screenshot_path = self.tab.get_screenshot(
-                path=path, 
+                path=str(path), 
                 name=name, 
                 full_page=full_page
             )
@@ -49,40 +64,52 @@ class ScreenshotService:
     
     def capture_element(self, 
                        xpath: str, 
-                       path: str = ".", 
-                       name: str = "element_screenshot.png") -> str:
+                       path: str = None, 
+                       name: str = None) -> str:
         """捕获指定元素的截图
         
         Args:
             xpath: 元素的XPath表达式
-            path: 保存路径
-            name: 文件名
+            path: 保存路径，如果为None则使用默认元素截图目录
+            name: 文件名，如果为None则使用带时间戳的默认名称
             
         Returns:
             str: 截图文件路径或错误信息
         """
         try:
+            from ..config.settings import get_screenshots_directory
+            
             element = self.tab.ele(f'xpath:{xpath}', timeout=4)
             
             if not element:
                 return f"元素 {xpath} 不存在，无法截图"
             
-            # 确保路径存在
-            Path(path).mkdir(parents=True, exist_ok=True)
+            if not path:
+                base_dir = get_screenshots_directory()
+                path = base_dir / "element"
+            else:
+                path = Path(path)
             
-            screenshot_path = element.get_screenshot(path=path, name=name)
+            if not name:
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                name = f"element_{timestamp}.png"
+            
+            # 确保路径存在
+            path.mkdir(parents=True, exist_ok=True)
+            
+            screenshot_path = element.get_screenshot(path=str(path), name=name)
             return screenshot_path
         except Exception as e:
             return f"元素截图失败: {str(e)}"
     
     def capture_with_timestamp(self, 
-                              path: str = ".", 
+                              path: str = None, 
                               prefix: str = "screenshot", 
                               full_page: bool = False) -> str:
         """捕获带时间戳的截图
         
         Args:
-            path: 保存路径
+            path: 保存路径，如果为None则使用默认截图目录
             prefix: 文件名前缀
             full_page: 是否截取完整页面
             
@@ -99,13 +126,13 @@ class ScreenshotService:
             return f"时间戳截图失败: {str(e)}"
     
     def capture_viewport(self, 
-                        path: str = ".", 
-                        name: str = "viewport_screenshot.png") -> str:
+                        path: str = None, 
+                        name: str = None) -> str:
         """捕获当前视口截图
         
         Args:
-            path: 保存路径
-            name: 文件名
+            path: 保存路径，如果为None则使用默认视口截图目录
+            name: 文件名，如果为None则使用带时间戳的默认名称
             
         Returns:
             str: 截图文件路径或错误信息
@@ -113,13 +140,13 @@ class ScreenshotService:
         return self.capture_page(path, name, full_page=False)
     
     def capture_full_page(self, 
-                         path: str = ".", 
-                         name: str = "fullpage_screenshot.png") -> str:
+                         path: str = None, 
+                         name: str = None) -> str:
         """捕获完整页面截图
         
         Args:
-            path: 保存路径
-            name: 文件名
+            path: 保存路径，如果为None则使用默认完整页面截图目录
+            name: 文件名，如果为None则使用带时间戳的默认名称
             
         Returns:
             str: 截图文件路径或错误信息

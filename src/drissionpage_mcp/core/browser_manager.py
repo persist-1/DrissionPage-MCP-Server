@@ -20,7 +20,7 @@ class BrowserManager:
         self.current_tab = None
         self._setup_chrome_path()
     
-    async def connect_or_open_browser(self, config: Dict[str, Any] = None) -> Dict[str, Any]:
+    def connect_or_open_browser(self, config: Dict[str, Any] = None) -> Dict[str, Any]:
         """打开或接管已打开的浏览器
         
         Args:
@@ -98,7 +98,7 @@ class BrowserManager:
             dict: 标签页信息
         """
         if not self.browser:
-            await self.connect_or_open_browser()
+            self.connect_or_open_browser()
             
         tab = self.browser.new_tab(url)
         self.current_tab = tab
@@ -119,7 +119,7 @@ class BrowserManager:
             dict: 标签页信息
         """
         if not self.browser:
-            await self.connect_or_open_browser()
+            self.connect_or_open_browser()
             
         self.current_tab = self.browser.latest_tab
         self.current_tab.get(url)

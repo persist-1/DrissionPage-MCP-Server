@@ -83,13 +83,14 @@ class DrissionPageMCP:
                 if user_data_dir:
                     config["user_data_dir"] = user_data_dir
                     
-                result = await self.browser_manager.connect_or_open_browser(config)
+                # 修复：connect_or_open_browser不是异步方法
+                result = self.browser_manager.connect_or_open_browser(config)
                 
                 # 初始化其他服务
                 if self.browser_manager.current_tab:
                     self._initialize_services()
                 
-                return result
+                return f"浏览器连接成功: {result['latest_tab_title']} - {result['browser_address']}"
             except Exception as e:
                 logger.error(f"连接浏览器失败: {e}")
                 return f"连接浏览器失败: {str(e)}"
@@ -107,7 +108,7 @@ class DrissionPageMCP:
                 if self.browser_manager.current_tab:
                     self._initialize_services()
                 
-                return result
+                return f"新标签页创建成功: {result['title']} - {result['url']}"
             except Exception as e:
                 logger.error(f"创建标签页失败: {e}")
                 return f"创建标签页失败: {str(e)}"
@@ -122,7 +123,8 @@ class DrissionPageMCP:
                 if not validate_url(url):
                     return f"无效的URL: {url}"
                 
-                return await self.browser_manager.navigate_to_url(url)
+                result = await self.browser_manager.get(url)
+                return f"导航成功: {result['title']} - {result['url']}"
             except Exception as e:
                 logger.error(f"导航失败: {e}")
                 return f"导航失败: {str(e)}"
@@ -136,9 +138,12 @@ class DrissionPageMCP:
                     return "请先连接浏览器"
                 
                 if selector_type == "xpath":
-                    return await self.element_handler.click_by_xpath(selector, index)
+                    # 修复：click_by_xpath不是异步方法
+                    result = self.element_handler.click_by_xpath(selector)
+                    return str(result)
                 elif selector_type == "text":
-                    return await self.element_handler.click_by_containing_text(selector, index)
+                    # 修复：click_by_containing_text不是异步方法
+                    return self.element_handler.click_by_containing_text(selector, index)
                 else:
                     # CSS选择器
                     element = self.element_handler.tab.ele(selector, index=index + 1)
@@ -158,7 +163,9 @@ class DrissionPageMCP:
                 if not self.element_handler:
                     return "请先连接浏览器"
                 
-                return await self.element_handler.input_by_xpath(selector, text, clear_first)
+                # 修复：input_by_xpath不是异步方法
+                result = self.element_handler.input_by_xpath(selector, text, clear_first)
+                return str(result)
             except Exception as e:
                 logger.error(f"输入文本失败: {e}")
                 return f"输入文本失败: {str(e)}"
@@ -186,7 +193,8 @@ class DrissionPageMCP:
                 if not self.element_handler:
                     return "请先连接浏览器"
                 
-                return await self.element_handler.get_body_text()
+                # 修复：get_body_text不是异步方法
+                return self.element_handler.get_body_text()
             except Exception as e:
                 logger.error(f"获取页面文本失败: {e}")
                 return f"获取页面文本失败: {str(e)}"
@@ -199,12 +207,13 @@ class DrissionPageMCP:
                 if not self.screenshot_service:
                     return "请先连接浏览器"
                 
+                # 使用新的目录结构，传入None让服务自动处理路径
                 if element_selector:
-                    return await self.screenshot_service.capture_element_screenshot(element_selector, filename)
+                    return self.screenshot_service.capture_element(element_selector, None, filename)
                 elif full_page:
-                    return await self.screenshot_service.capture_full_page_screenshot(filename)
+                    return self.screenshot_service.capture_full_page(None, filename)
                 else:
-                    return await self.screenshot_service.capture_viewport_screenshot(filename)
+                    return self.screenshot_service.capture_viewport(None, filename)
             except Exception as e:
                 logger.error(f"截图失败: {e}")
                 return f"截图失败: {str(e)}"
@@ -216,7 +225,8 @@ class DrissionPageMCP:
                 if not self.screenshot_service:
                     raise Exception("请先连接浏览器")
                 
-                return await self.screenshot_service.get_screenshot_binary(format)
+                # 修复：使用正确的方法名，且不是异步方法
+                return self.screenshot_service.get_screenshot_bytes(format)
             except Exception as e:
                 logger.error(f"获取截图数据失败: {e}")
                 raise Exception(f"获取截图数据失败: {str(e)}")
@@ -229,7 +239,11 @@ class DrissionPageMCP:
                 if not self.dom_service:
                     return "请先连接浏览器"
                 
-                return await self.dom_service.get_simplified_dom_tree(selector, max_depth)
+                # 修复：根据selector参数选择合适的方法
+                if selector == "body":
+                    return str(self.dom_service.get_simplified_dom_tree())
+                else:
+                    return str(self.dom_service.get_dom_tree_by_selector(selector))
             except Exception as e:
                 logger.error(f"获取DOM树失败: {e}")
                 return f"获取DOM树失败: {str(e)}"
@@ -242,9 +256,12 @@ class DrissionPageMCP:
                     return "请先连接浏览器"
                 
                 if selector_type == "text":
-                    return await self.dom_service.find_elements_by_text(selector)
+                    # 修复：使用正确的方法名 search_elements_by_text
+                    elements = self.dom_service.search_elements_by_text(selector)
+                    return str(elements)
                 else:
-                    return await self.dom_service.get_element_details(selector)
+                    # 修复：使用正确的方法名，且不是异步方法
+                    return str(self.dom_service.get_element_info(selector))
             except Exception as e:
                 logger.error(f"查找元素失败: {e}")
                 return f"查找元素失败: {str(e)}"
@@ -257,10 +274,11 @@ class DrissionPageMCP:
                 if not self.network_listener:
                     return "请先连接浏览器"
                 
+                # 修复：network_listener的方法都是同步的，且使用正确的方法名
                 if filter_types:
-                    return await self.network_listener.start_response_listener(filter_types, [])
+                    return self.network_listener.setup_response_listener(filter_types[0] if filter_types else "application/json")
                 else:
-                    return await self.network_listener.enable_network_domain()
+                    return self.network_listener.enable_network_domain()
             except Exception as e:
                 logger.error(f"启用网络监控失败: {e}")
                 return f"启用网络监控失败: {str(e)}"
@@ -272,7 +290,11 @@ class DrissionPageMCP:
                 if not self.network_listener:
                     return "请先连接浏览器"
                 
-                return await self.network_listener.get_response_listener_data(limit)
+                # 修复：get_response_listener_data不是异步方法，且不接受limit参数
+                data = self.network_listener.get_response_listener_data()
+                # 限制返回的数据量
+                limited_data = data[-limit:] if len(data) > limit else data
+                return str(limited_data)
             except Exception as e:
                 logger.error(f"获取网络日志失败: {e}")
                 return f"获取网络日志失败: {str(e)}"
@@ -285,7 +307,8 @@ class DrissionPageMCP:
                 if not self.file_handler:
                     return "请先连接浏览器"
                 
-                return await self.file_handler.save_page_source(filename)
+                # 修复：file_handler.save_page_source不是异步方法
+                return self.file_handler.save_page_source(filename)
             except Exception as e:
                 logger.error(f"保存页面源码失败: {e}")
                 return f"保存页面源码失败: {str(e)}"
@@ -294,10 +317,12 @@ class DrissionPageMCP:
         async def get_cookies() -> str:
             """获取当前页面的Cookies"""
             try:
-                if not self.file_handler:
+                if not self.browser_manager or not self.browser_manager.current_tab:
                     return "请先连接浏览器"
                 
-                return await self.file_handler.get_cookies()
+                # 修复：直接从tab获取cookies，file_handler没有get_cookies方法
+                cookies = self.browser_manager.current_tab.cookies()
+                return str(cookies)
             except Exception as e:
                 logger.error(f"获取Cookies失败: {e}")
                 return f"获取Cookies失败: {str(e)}"
@@ -310,7 +335,8 @@ class DrissionPageMCP:
                 if not self.element_handler:
                     return "请先连接浏览器"
                 
-                return await self.element_handler.run_js(code, return_result)
+                # 修复：直接调用tab的run_js方法，不是异步方法
+                return self.element_handler.tab.run_js(code)
             except Exception as e:
                 logger.error(f"执行JavaScript失败: {e}")
                 return f"执行JavaScript失败: {str(e)}"
