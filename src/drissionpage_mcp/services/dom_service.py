@@ -136,20 +136,27 @@ class DOMService:
         except Exception as e:
             return {"error": f"获取指定选择器的DOM树失败: {str(e)}"}
     
-    def get_element_info(self, xpath: str) -> Dict[str, Any]:
+    def get_element_info(self, selector: str, selector_type: str = "xpath") -> Dict[str, Any]:
         """获取指定元素的详细信息
         
         Args:
-            xpath: 元素的XPath表达式
+            selector: 元素选择器
+            selector_type: 选择器类型，支持 'xpath', 'css'
             
         Returns:
             dict: 元素信息
         """
         try:
-            element = self.tab.ele(f'xpath:{xpath}', timeout=2)
+            # 根据选择器类型构建定位符
+            if selector_type == "css":
+                locator = f'css:{selector}'
+            else:
+                locator = f'xpath:{selector}'
+            
+            element = self.tab.ele(locator, timeout=2)
             
             if not element:
-                return {"error": f"元素 {xpath} 不存在"}
+                return {"error": f"元素 {selector} 不存在"}
             
             # 修复：DrissionPage的ChromiumElement属性访问需要更安全的方式
             element_info = {

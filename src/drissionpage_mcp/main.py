@@ -284,7 +284,7 @@ class DrissionPageMCP:
                     return str(formatted_results)
                 else:
                     # CSS选择器等其他类型的查找
-                    return str(self.dom_service.get_element_info(selector))
+                    return str(self.dom_service.get_element_info(selector, selector_type))
             except Exception as e:
                 logger.error(f"查找元素失败: {e}")
                 return f"查找元素失败: {str(e)}"
