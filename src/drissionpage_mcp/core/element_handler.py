@@ -403,7 +403,7 @@ class ElementHandler:
             return f"发送按键失败: {str(e)}"
     
     def click_element_unified(self, selector: str, selector_type: str = "css", index: int = 0, 
-                             smart_feedback: bool = True, use_cache: bool = True) -> str:
+                             smart_feedback: bool = True) -> str:
         """统一的元素点击接口
         
         Args:
@@ -411,7 +411,6 @@ class ElementHandler:
             selector_type: 选择器类型 (css, xpath, text, id, class, name, tag)
             index: 元素索引（当有多个匹配时）
             smart_feedback: 是否启用智能反馈
-            use_cache: 是否使用缓存
             
         Returns:
             str: 点击结果

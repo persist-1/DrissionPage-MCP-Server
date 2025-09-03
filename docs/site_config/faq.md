@@ -245,24 +245,19 @@ logs = await get_network_logs()
 
 **A:** 性能优化建议：
 
-1. **启用缓存**：
-   ```python
-   result = await click_element("#button", use_cache=True)
-   ```
-
-2. **减少截图频率**：
+1. **减少截图频率**：
    ```python
    # 只在必要时截图
    if need_screenshot:
        await take_screenshot()
    ```
 
-3. **限制 DOM 深度**：
+2. **限制 DOM 深度**：
    ```python
    result = await get_dom_tree(max_depth=5)
    ```
 
-4. **关闭不需要的标签页**：
+3. **关闭不需要的标签页**：
    ```python
    # 定期清理标签页
    await close_unused_tabs()

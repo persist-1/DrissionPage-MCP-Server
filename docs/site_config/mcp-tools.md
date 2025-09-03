@@ -75,7 +75,6 @@ navigate(url="https://www.google.com")
 - `selector_type` (str, 可选): 选择器类型 (css, xpath, text)，默认 "css"
 - `index` (int, 可选): 元素索引（多个匹配时），默认 0
 - `smart_feedback` (bool, 可选): 是否启用智能反馈，默认 True
-- `use_cache` (bool, 可选): 是否使用缓存，默认 True
 
 **选择器优先级：**
 1. ID选择器：`#element-id` （最优先）
@@ -379,7 +378,7 @@ run_cdp_command(command="Performance.getMetrics")
    - 查看网络日志排查异步加载问题
 
 2. **性能优化：**
-   - 启用缓存机制 (`use_cache=True`)
+   - 利用浏览器内置缓存机制提升页面加载速度
    - 合理设置元素查找限制 (`limit`)
    - 适当控制DOM树深度 (`max_depth`)
 

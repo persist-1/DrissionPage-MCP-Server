@@ -130,7 +130,6 @@ result = await navigate("file:///path/to/local.html")
 | `selector_type` | `str` | `"css"` | 选择器类型：css/xpath/text |
 | `index` | `int` | `0` | 元素索引（多个匹配时） |
 | `smart_feedback` | `bool` | `true` | 启用智能反馈 |
-| `use_cache` | `bool` | `true` | 使用缓存提升性能 |
 
 **返回值：**
 ```json
@@ -745,9 +744,6 @@ if not result.get("success"):
 ### 3. 性能优化
 
 ```python
-# 推荐：启用缓存
-result = await click_element("#button", use_cache=True)
-
 # 推荐：合理设置限制
 result = await find_elements(".item", limit=20)
 ```

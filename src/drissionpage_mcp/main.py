@@ -138,8 +138,8 @@ class DrissionPageMCP:
         # 元素操作工具
         @self.app.tool()
         async def click_element(selector: str, selector_type: str = "css", index: int = 0, 
-                               smart_feedback: bool = True, use_cache: bool = True) -> str:
-            """🎯 点击页面元素（智能优化版）
+                               smart_feedback: bool = True) -> str:
+            """点击页面元素（智能优化版）
             
             ⚠️ 重要提示：使用此工具前，请务必遵循标准化工作流程：
             1. 📸 先使用 take_screenshot() 确认目标元素存在
@@ -158,7 +158,6 @@ class DrissionPageMCP:
                 selector_type: 选择器类型 (css, xpath, text)
                 index: 元素索引（当有多个匹配时，从0开始）
                 smart_feedback: 是否启用智能反馈（推荐True）
-                use_cache: 是否使用缓存（推荐True以提升性能）
 
             Returns:
                 str: 操作结果和反馈信息
@@ -173,7 +172,7 @@ class DrissionPageMCP:
                 
                 # 原因：使用统一的元素点击接口，支持更多选择器类型和智能反馈，副作用：无，回滚策略：还原原始逻辑
                 return self.element_handler.click_element_unified(
-                    selector, selector_type, index, smart_feedback, use_cache
+                    selector, selector_type, index, smart_feedback
                 )
             except Exception as e:
                 logger.error(f"点击元素失败: {e}")
@@ -181,7 +180,7 @@ class DrissionPageMCP:
         
         @self.app.tool()
         async def input_text(selector: str, text: str, clear_first: bool = True) -> str:
-            """⌨️ 在输入框中输入文本（智能优化版）
+            """在输入框中输入文本（智能优化版）
             
             ⚠️ 重要提示：使用此工具前，请务必遵循标准化工作流程：
             1. 📸 先使用 take_screenshot() 确认输入框存在且可见
@@ -219,7 +218,7 @@ class DrissionPageMCP:
         
         @self.app.tool()
         async def get_element_text(selector: str) -> str:
-            """📝 获取元素文本内容（精确定位版）
+            """获取元素文本内容（精确定位版）
             
             ⚠️ 重要提示：这是预处理工具，用于获取精确的元素信息！
             使用场景：
@@ -257,7 +256,7 @@ class DrissionPageMCP:
         
         @self.app.tool()
         async def get_page_text() -> str:
-            """📄 获取页面完整文本内容（预处理必备工具）
+            """获取页面完整文本内容（预处理必备工具）
             
             ⚠️ 核心预处理工具：这是标准化工作流程的第2步！
             
@@ -294,7 +293,7 @@ class DrissionPageMCP:
         # 截图工具
         @self.app.tool()
         async def take_screenshot(filename: str = None, full_page: bool = False, element_selector: str = None) -> str:
-            """📸 截取页面截图（标准化工作流程第1步）
+            """截取页面截图（标准化工作流程第1步）
             
             ⚠️ 核心预处理工具：这是标准化工作流程的第1步！
             
@@ -352,7 +351,7 @@ class DrissionPageMCP:
         # DOM操作工具
         @self.app.tool()
         async def get_dom_tree(selector: str = "body", max_depth: int = 10) -> str:
-            """🌳 获取DOM树结构（结构化分析工具）
+            """获取DOM树结构（结构化分析工具）
             
             ⚠️ 核心分析工具：这是标准化工作流程的第3步！
             
@@ -395,7 +394,7 @@ class DrissionPageMCP:
         @self.app.tool()
         async def find_elements(selector: str, selector_type: str = "css", 
                                limit: int = 10, include_similar: bool = True) -> str:
-            """🔍 查找页面元素（智能定位工具）
+            """查找页面元素（智能定位工具）
             
             ⚠️ 精确定位工具：基于DOM分析结果进行元素查找！
             
